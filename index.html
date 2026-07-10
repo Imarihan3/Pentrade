@@ -57,30 +57,32 @@
 <body>
 
     <div id="hud-overlay">
-        <div class="hud-text">SECURE ACCESS ROUTER</div>
-        <div class="hud-text" id="user-display">UNAUTHORIZED</div>
+        <div class="hud-text">PEN TRADE ARCHIVE</div>
+        <div class="hud-text" id="user-display">OFFLINE</div>
     </div>
 
     <div class="glass-panel" id="auth-box">
-        <h3 style="color:#d4af37; letter-spacing:4px; margin-bottom:15px;">IDENTITY GATE</h3>
-        <input type="email" id="auth-email" placeholder="ENTER EMAIL ADDRESS">
-        <input type="password" id="auth-pass" placeholder="ENTER ACCESS PHRASE">
-        <button class="gold-btn" id="auth-action" style="margin-top:10px;">INITIALIZE SESSION</button>
+        <h3 style="color:#d4af37; letter-spacing:4px; margin-bottom:15px;">PEN TRADE</h3>
+        <input type="email" id="auth-email" placeholder="Email">
+        <input type="password" id="auth-pass" placeholder="Password">
+        <input type="text" id="room-code" placeholder="Trade Room Code (Optional)">
+        <button class="gold-btn" id="auth-action" style="margin-top:10px;">LOGIN</button>
+        <button class="gold-btn" id="auth-create" style="margin-top:10px;">CREATE ACCOUNT</button>
     </div>
 
     <div class="glass-panel" id="request-card">
-        <h4 style="color:#d4af37; letter-spacing:3px;">INCOMING BROKER OFFER</h4>
+        <h4 style="color:#d4af37; letter-spacing:3px;">TRADE REQUEST</h4>
         <p class="hud-text" id="req-sender" style="margin: 8px 0;"></p>
         <img class="pen-preview" id="req-img" src="" alt="Pending Item Asset">
         <h2 id="req-name" style="font-weight:300; letter-spacing:2px; margin-bottom:5px;"></h2>
         <div class="btn-group">
-            <button class="gold-btn btn-decline" id="act-decline">REJECT</button>
+            <button class="gold-btn btn-decline" id="act-decline">DECLINE</button>
             <button class="gold-btn" id="act-accept">ACCEPT</button>
         </div>
     </div>
 
     <div class="glass-panel" id="action-box">
-        <button class="gold-btn" id="go-trade" style="padding: 16px 45px;">CONSTRUCT NEW TRANSACTION</button>
+        <button class="gold-btn" id="go-trade" style="padding: 16px 45px;">CREATE TRADE ROOM</button>
     </div>
 
     <div id="canvas-container"></div>
@@ -152,17 +154,34 @@
         animate();
 
         // --- Client Authentication Terminal Controller ---
+        // Login Logic Execution
         document.getElementById('auth-action').addEventListener('click', async () => {
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+            const roomCode = document.getElementById('room-code').value.trim();
+            if(!email || !pass) return;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                if (roomCode) {
+                    localStorage.setItem("roomCode", roomCode);
+                }
+            } catch(e) {
+                alert("Login Failed: " + e.message);
+            }
+        });
+
+        // Account Creation Logic Execution
+        document.getElementById('auth-create').addEventListener('click', async () => {
             const email = document.getElementById('auth-email').value.trim();
             const pass = document.getElementById('auth-pass').value;
             if(!email || !pass) return;
 
             try {
-                await signInWithEmailAndPassword(auth, email, pass);
+                await createUserWithEmailAndPassword(auth, email, pass);
+                alert("Account created successfully!");
             } catch(e) {
-                try {
-                    await createUserWithEmailAndPassword(auth, email, pass);
-                } catch(err) { alert(err.message); }
+                alert("Account Creation Failed: " + e.message);
             }
         });
 
