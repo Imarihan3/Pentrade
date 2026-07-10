@@ -89,16 +89,17 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // CONFIGURATION: Replace with your actual Firebase project credentials
+        // CONFIGURATION: Integrated pentrade project credentials
         const firebaseConfig = {
-            apiKey: "AIzaSyYourKeyHere...",
-            authDomain: "your-app.firebaseapp.com",
-            projectId: "your-app",
-            storageBucket: "your-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:1234:web:abcd"
+            apiKey: "AIzaSyDBW2cqHZSZ7pe8BhwW82p8H3uVlhndsZY",
+            authDomain: "pentrade.firebaseapp.com",
+            projectId: "pentrade",
+            storageBucket: "pentrade.firebasestorage.app",
+            messagingSenderId: "912322438619",
+            appId: "1:912322438619:web:0c68111d715cfdb5b7b3fe",
+            measurementId: "G-LHV26VY0WR"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -139,7 +140,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const time = typeof clock !== 'undefined' ? clock.getElapsedTime() : performance.now() * 0.001;
+            const time = performance.now() * 0.001;
             
             // Quiet environment animation loop parameters
             focalToken.rotation.y = Math.sin(time * 0.5) * 0.2;
@@ -171,14 +172,15 @@
                 activeUser = user;
                 document.getElementById('auth-box').style.display = 'none';
                 document.getElementById('user-display').innerText = user.email.toUpperCase();
-                document.getElementById('action-box').style.display = 'block';
                 initializeIncomingListener(user.email);
             }
         });
 
         // --- Firebase Streaming Offer Pipeline Listener ---
         function initializeIncomingListener(userEmail) {
-            const q = query(collection(db, "trades"), where("receiverEmail", "==", userEmail), where("status", "==", "pending"));
+            const tradesRef = collection(db, "trades");
+            const q = query(tradesRef, where("receiverEmail", "==", userEmail), where("status", "==", "pending"));
+            
             onSnapshot(q, (snapshot) => {
                 if(!snapshot.empty) {
                     const docSnap = snapshot.docs[0];
@@ -206,15 +208,17 @@
         }
 
         // --- System Resolution Event Channels ---
-        document.getElementById('act-accept').addEventListener('click', async () => {
+        document.getElementById('act-accept').addEventListener('click', () => {
             if(!activeTradeId) return;
             window.location.href = `trade.html?id=${activeTradeId}`;
         });
 
         document.getElementById('act-decline').addEventListener('click', async () => {
             if(!activeTradeId) return;
-            await deleteDoc(doc(db, "trades", activeTradeId));
-            alert("Contract Purged.");
+            try {
+                await deleteDoc(doc(db, "trades", activeTradeId));
+                alert("Contract Purged.");
+            } catch(e) { alert("Purge Failed: " + e.message); }
         });
 
         document.getElementById('go-trade').addEventListener('click', () => {
