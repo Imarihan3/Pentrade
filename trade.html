@@ -98,15 +98,17 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // CONFIGURATION: Integrated pentrade project credentials
         const firebaseConfig = {
-            apiKey: "AIzaSyYourKeyHere...",
-            authDomain: "your-app.firebaseapp.com",
-            projectId: "your-app",
-            storageBucket: "your-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:1234:web:abcd"
+            apiKey: "AIzaSyDBW2cqHZSZ7pe8BhwW82p8H3uVlhndsZY",
+            authDomain: "pentrade.firebaseapp.com",
+            projectId: "pentrade",
+            storageBucket: "pentrade.firebasestorage.app",
+            messagingSenderId: "912322438619",
+            appId: "1:912322438619:web:0c68111d715cfdb5b7b3fe",
+            measurementId: "G-LHV26VY0WR"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -131,10 +133,12 @@
         container.appendChild(renderer.domElement);
 
         // Core Assembly Structs
-        const desk = new THREE.Mesh(new THREE.BoxGeometry(7, 1.8, 3.5), new THREE.MeshStandardMaterial({ color: 0x1a110a, roughness: 0.5 }));
+        const deskMat = new THREE.MeshStandardMaterial({ color: 0x1a110a, roughness: 0.5 });
+        const desk = new THREE.Mesh(new THREE.BoxGeometry(7, 1.8, 3.5), deskMat);
         desk.position.set(0, 0.9, -2); scene.add(desk);
 
-        const traderSilhouette = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 3, 10), new THREE.MeshStandardMaterial({ color: 0x030305, roughness: 0.9 }));
+        const clothMat = new THREE.MeshStandardMaterial({ color: 0x030305, roughness: 0.9 });
+        const traderSilhouette = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 3, 10), clothMat);
         traderSilhouette.position.set(0, 2.8, -4.5); scene.add(traderSilhouette);
 
         const warmLight = new THREE.PointLight(0xff9933, 1.5, 20); warmLight.position.set(0, 6, -1); scene.add(warmLight);
@@ -180,19 +184,20 @@
             const customId = `TRADE_${Date.now()}`;
             sessionTradeId = customId;
 
-            await setDoc(doc(db, "trades", customId), {
-                id: customId,
-                senderEmail: activeUser.email,
-                receiverEmail: target,
-                status: "pending",
-                senderConfirm: false,
-                receiverConfirm: false,
-                senderPenName: "", senderPenBrand: "", senderPenCond: "", senderPenDesc: "", senderPenImg: "",
-                receiverPenName: "", receiverPenBrand: "", receiverPenCond: "", receiverPenDesc: "", receiverPenImg: ""
-            });
-
-            document.getElementById('init-contract-btn').innerText = "CONTAINER ACTIVE // SYNCING";
-            mountSyncPipeline();
+            try {
+                await setDoc(doc(db, "trades", customId), {
+                    id: customId,
+                    senderEmail: activeUser.email,
+                    receiverEmail: target,
+                    status: "pending",
+                    senderConfirm: false,
+                    receiverConfirm: false,
+                    senderPenName: "", senderPenBrand: "", senderPenCond: "", senderPenDesc: "", senderPenImg: "",
+                    receiverPenName: "", receiverPenBrand: "", receiverPenCond: "", receiverPenDesc: "", receiverPenImg: ""
+                });
+                document.getElementById('init-contract-btn').innerText = "CONTAINER ACTIVE // SYNCING";
+                mountSyncPipeline();
+            } catch(e) { alert("Deployment Failed: " + e.message); }
         });
 
         // Local Input Observers to stream updates immediately
@@ -200,7 +205,7 @@
             document.getElementById(id).addEventListener('input', synchronizeLocalChangesToCloud);
         });
 
-        // Stream local file changes using FileReader base64 encoding directly into the model
+        // Stream local file changes base64 encoding directly into the model
         document.getElementById('local-file').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if(!file) return;
@@ -213,7 +218,7 @@
                 if(sessionTradeId) {
                     const payload = {};
                     payload[`${currentRole}PenImg`] = b64;
-                    await updateDoc(doc(db, "trades", sessionTradeId), payload);
+                    try { await updateDoc(doc(db, "trades", sessionTradeId), payload); } catch(err){}
                 }
             };
             r.readAsDataURL(file);
@@ -228,7 +233,7 @@
             p[`${currentRole}PenCond`] = document.getElementById('local-cond').value;
             p[`${currentRole}PenDesc`] = document.getElementById('local-desc').value;
 
-            await updateDoc(doc(db, "trades", sessionTradeId), p);
+            try { await updateDoc(doc(db, "trades", sessionTradeId), p); } catch(e){}
         }
 
         // --- Real-time Bidirectional Synced UI Data Rendering Pipeline ---
@@ -256,12 +261,12 @@
                     rImg.src = d[`${peer}PenImg`]; rImg.style.display = 'block';
                 }
 
-                // Check and show if the local copy has remote data already bound
+                // Push initial cloud data to local inputs if not focused
                 if(document.activeElement?.id ? !document.activeElement.id.startsWith('local') : true) {
                     document.getElementById('local-name').value = d[`${currentRole}PenName`] || "";
-                    document.getElementById('local-brand').value = d[`${currentRole}Brand`] || "";
-                    document.getElementById('local-cond').value = d[`${currentRole}Cond`] || "Mint (Collectible)";
-                    document.getElementById('local-desc').value = d[`${currentRole}Desc`] || "";
+                    document.getElementById('local-brand').value = d[`${currentRole}PenBrand`] || "";
+                    document.getElementById('local-cond').value = d[`${currentRole}PenCond`] || "Mint (Collectible)";
+                    document.getElementById('local-desc').value = d[`${currentRole}PenDesc`] || "";
                 }
 
                 // Verify confirmation parameters status matrices
@@ -279,11 +284,11 @@
             });
         }
 
-        // Action: Commit confirmation parameters on interactive click event
+        // Action: Commit confirmation parameters
         document.getElementById('master-confirm-btn').addEventListener('click', async () => {
-            if(!sessionTradeId) return alert("Establish validation data container channel loops first.");
+            if(!sessionTradeId) return;
             const p = {}; p[`${currentRole}Confirm`] = true;
-            await updateDoc(doc(db, "trades", sessionTradeId), p);
+            try { await updateDoc(doc(db, "trades", sessionTradeId), p); } catch(e){}
         });
 
         window.addEventListener('resize', () => {
