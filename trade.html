@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pen Trade - Chamber Matrix</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #020204; font-family: 'Courier New', Courier, monospace; }
+        #canvas-container { width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
+        
+        #chamber-hud {
+            position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 30px; pointer-events: none;
+        }
+        .interactive { pointer-events: auto; }
+        
+        .glass-panel {
+            background: rgba(10, 10, 15, 0.7); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(214, 175, 55, 0.15); border-radius: 6px; padding: 25px; color: #fff;
+            width: 420px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+        }
+        
+        .workspace-row { display: flex; justify-content: space-between; width: 100%; margin-top: auto; margin-bottom: auto; }
+        
+        input, textarea, select {
+            width: 100%; background: rgba(255,255,255,0.02); border: 1px solid rgba(214,175,55,0.2);
+            padding: 10px; margin: 8px 0; color: #fff; border-radius: 4px; font-family: inherit; outline: none; font-size: 0.85rem;
+        }
+        input:focus, textarea:focus, select:focus { border-color: #d4af37; }
+        
+        .gold-btn {
+            background: linear-gradient(135deg, #1e1e26 0%, #0a0a0d 100%); color: #d4af37;
+            border: 1px solid rgba(214,175,55,0.4); padding: 18px; width: 100%; cursor: pointer;
+            font-family: inherit; letter-spacing: 3px; font-weight: bold; border-radius: 4px; transition: all 0.4s ease;
+        }
+        .gold-btn:hover { color: #fff; border-color: #fff; box-shadow: 0 0 25px rgba(214,175,55,0.3); }
+        
+        .display-box { width: 100%; min-height: 140px; background: rgba(0,0,0,0.3); border: 1px solid rgba(214,175,55,0.1); margin-top: 10px; padding: 15px; border-radius: 4px; }
+        .preview-frame { width: 100%; height: 130px; object-fit: contain; background: rgba(255,255,255,0.01); border-radius: 4px; border: 1px dashed rgba(214,175,55,0.2); }
+        
+        #footer-control { width: 100%; max-width: 500px; margin: 0 auto; text-align: center; }
+        
+        #completion-blockout {
+            position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 100;
+            display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 2s ease;
+        }
+        #completion-blockout.triggered { opacity: 1; visibility: visible; }
+    </style>
+</head>
+<body>
+
+    <div id="completion-blockout">
+        <h1 style="color:#d4af37; letter-spacing: 15px; font-weight: 300; font-size: 2.5rem;">TRADE COMPLETED</h1>
+    </div>
+
+    <div id="chamber-hud">
+        <div style="display:flex; justify-content:space-between; width:100%;">
+            <div class="glass-panel interactive" style="width:320px; padding:15px;">
+                <input type="email" id="target-recipient" placeholder="RECIPIENT EMAIL">
+                <button class="gold-btn" id="init-contract-btn" style="padding:10px; font-size:0.8rem;">DISPATCH CONTRACT CONTAINER</button>
+            </div>
+            <div style="color:#d4af37; letter-spacing:4px; text-align:right; font-size:0.9rem; padding:15px;">SECURE VAULT MODULE</div>
+        </div>
+
+        <div class="workspace-row">
+            <div class="glass-panel interactive" id="local-panel">
+                <h4 style="color:#d4af37; letter-spacing:2px; margin-bottom:10px;">LOCAL CLIENT OFFER</h4>
+                <input type="file" id="local-file" accept="image/*" style="display:none;">
+                <button class="gold-btn" onclick="document.getElementById('local-file').click()" style="padding:10px; font-size:0.75rem; margin-bottom:5px;">UPLOAD SOURCE SPECIMEN</button>
+                <img class="preview-frame" id="local-preview-img" src="" style="display:none;">
+                
+                <input type="text" id="local-name" placeholder="PEN VARIANT NAME">
+                <input type="text" id="local-brand" placeholder="MANUFACTURER BRAND">
+                <select id="local-cond">
+                    <option value="Mint (Collectible)">MINT CONDITION</option>
+                    <option value="Fine (Light Wear)">FINE CONDITION</option>
+                    <option value="Vintage Restored">VINTAGE RESTORED</option>
+                </select>
+                <textarea id="local-desc" rows="2" placeholder="ADDITIONAL STRUCTURAL ARCHIVE NOTES..."></textarea>
+            </div>
+
+            <div class="glass-panel" id="remote-panel">
+                <h4 style="color:#d4af37; letter-spacing:2px; margin-bottom:10px;">COUNTERPARTY STREAM</h4>
+                <img class="preview-frame" id="remote-preview-img" src="" style="display:none;">
+                <div class="display-box" id="remote-data-content">AWAITING CONNECTION NODE STREAM TRANSMISSION...</div>
+            </div>
+        </div>
+
+        <div id="footer-control" class="interactive">
+            <button class="gold-btn" id="master-confirm-btn">CONFIRM TRANSACTION</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyYourKeyHere...",
+            authDomain: "your-app.firebaseapp.com",
+            projectId: "your-app",
+            storageBucket: "your-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:1234:web:abcd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let activeUser = null;
+        let sessionTradeId = null;
+        let currentRole = null; // 'sender' | 'receiver'
+        let transmissionLock = false;
+
+        // --- 3D Architecture Canvas Execution System ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x010103);
+        scene.fog = new THREE.FogExp2(0x010103, 0.06);
+        
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 4, 12);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        // Core Assembly Structs
+        const desk = new THREE.Mesh(new THREE.BoxGeometry(7, 1.8, 3.5), new THREE.MeshStandardMaterial({ color: 0x1a110a, roughness: 0.5 }));
+        desk.position.set(0, 0.9, -2); scene.add(desk);
+
+        const traderSilhouette = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 3, 10), new THREE.MeshStandardMaterial({ color: 0x030305, roughness: 0.9 }));
+        traderSilhouette.position.set(0, 2.8, -4.5); scene.add(traderSilhouette);
+
+        const warmLight = new THREE.PointLight(0xff9933, 1.5, 20); warmLight.position.set(0, 6, -1); scene.add(warmLight);
+
+        function renderLoop() {
+            requestAnimationFrame(renderLoop);
+            const time = performance.now() * 0.001;
+            traderSilhouette.position.y = 2.8 + Math.sin(time * 1.1) * 0.01; // Soft breath
+            renderer.render(scene, camera);
+        }
+        renderLoop();
+
+        // --- Stream Engine Binding Routines ---
+        onAuthStateChanged(auth, (user) => {
+            if(user) {
+                activeUser = user;
+                evalUrlParameters();
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        function evalUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const routeId = urlParams.get('id');
+
+            if(routeId) {
+                sessionTradeId = routeId;
+                currentRole = 'receiver';
+                document.getElementById('target-recipient').style.display = 'none';
+                document.getElementById('init-contract-btn').style.display = 'none';
+                mountSyncPipeline();
+            } else {
+                currentRole = 'sender';
+            }
+        }
+
+        // Action: Create fresh contract entity reference node
+        document.getElementById('init-contract-btn').addEventListener('click', async () => {
+            const target = document.getElementById('target-recipient').value.trim();
+            if(!target || target === activeUser.email) return alert("Invalid Recipient Coordinate Input Specified.");
+
+            const customId = `TRADE_${Date.now()}`;
+            sessionTradeId = customId;
+
+            await setDoc(doc(db, "trades", customId), {
+                id: customId,
+                senderEmail: activeUser.email,
+                receiverEmail: target,
+                status: "pending",
+                senderConfirm: false,
+                receiverConfirm: false,
+                senderPenName: "", senderPenBrand: "", senderPenCond: "", senderPenDesc: "", senderPenImg: "",
+                receiverPenName: "", receiverPenBrand: "", receiverPenCond: "", receiverPenDesc: "", receiverPenImg: ""
+            });
+
+            document.getElementById('init-contract-btn').innerText = "CONTAINER ACTIVE // SYNCING";
+            mountSyncPipeline();
+        });
+
+        // Local Input Observers to stream updates immediately
+        ['local-name', 'local-brand', 'local-cond', 'local-desc'].forEach(id => {
+            document.getElementById(id).addEventListener('input', synchronizeLocalChangesToCloud);
+        });
+
+        // Stream local file changes using FileReader base64 encoding directly into the model
+        document.getElementById('local-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const r = new FileReader();
+            r.onload = async (event) => {
+                const b64 = event.target.result;
+                document.getElementById('local-preview-img').src = b64;
+                document.getElementById('local-preview-img').style.display = 'block';
+                
+                if(sessionTradeId) {
+                    const payload = {};
+                    payload[`${currentRole}PenImg`] = b64;
+                    await updateDoc(doc(db, "trades", sessionTradeId), payload);
+                }
+            };
+            r.readAsDataURL(file);
+        });
+
+        async function synchronizeLocalChangesToCloud() {
+            if(!sessionTradeId || transmissionLock) return;
+            
+            const p = {};
+            p[`${currentRole}PenName`] = document.getElementById('local-name').value;
+            p[`${currentRole}PenBrand`] = document.getElementById('local-brand').value;
+            p[`${currentRole}PenCond`] = document.getElementById('local-cond').value;
+            p[`${currentRole}PenDesc`] = document.getElementById('local-desc').value;
+
+            await updateDoc(doc(db, "trades", sessionTradeId), p);
+        }
+
+        // --- Real-time Bidirectional Synced UI Data Rendering Pipeline ---
+        function mountSyncPipeline() {
+            onSnapshot(doc(db, "trades", sessionTradeId), (snapshot) => {
+                if(!snapshot.exists()) return;
+                transmissionLock = true;
+                const d = snapshot.data();
+
+                const peer = (currentRole === 'sender') ? 'receiver' : 'sender';
+
+                // Synchronize counterparty visual displays
+                if(d[`${peer}PenName`] || d[`${peer}PenBrand`]) {
+                    document.getElementById('remote-data-content').innerHTML = `
+                        <p style="color:#d4af37; font-size:0.8rem; margin-bottom:5px;">OWNER: ${d[peer+'Email']}</p>
+                        <h2 style="font-weight:300; margin-bottom:8px;">${d[peer+'PenName'] || 'Unnamed'}</h2>
+                        <p><b>BRAND:</b> ${d[peer+'PenBrand'] || 'N/A'}</p>
+                        <p><b>CONDITION:</b> ${d[peer+'PenCond'] || 'N/A'}</p>
+                        <p style="margin-top:8px; font-size:0.8rem; color:#aaa;">${d[peer+'PenDesc'] || ''}</p>
+                    `;
+                }
+                
+                if(d[`${peer}PenImg`]) {
+                    const rImg = document.getElementById('remote-preview-img');
+                    rImg.src = d[`${peer}PenImg`]; rImg.style.display = 'block';
+                }
+
+                // Check and show if the local copy has remote data already bound
+                if(document.activeElement?.id ? !document.activeElement.id.startsWith('local') : true) {
+                    document.getElementById('local-name').value = d[`${currentRole}PenName`] || "";
+                    document.getElementById('local-brand').value = d[`${currentRole}Brand`] || "";
+                    document.getElementById('local-cond').value = d[`${currentRole}Cond`] || "Mint (Collectible)";
+                    document.getElementById('local-desc').value = d[`${currentRole}Desc`] || "";
+                }
+
+                // Verify confirmation parameters status matrices
+                if(d[`${currentRole}Confirm`]) {
+                    document.getElementById('master-confirm-btn').innerText = "AWAITING SECURE MATCH CONFIRMATION...";
+                    document.getElementById('master-confirm-btn').style.opacity = '0.5';
+                }
+
+                if(d.senderConfirm && d.receiverConfirm) {
+                    document.getElementById('completion-blockout').classList.add('triggered');
+                    setTimeout(() => { window.location.href = "index.html"; }, 4000);
+                }
+
+                transmissionLock = false;
+            });
+        }
+
+        // Action: Commit confirmation parameters on interactive click event
+        document.getElementById('master-confirm-btn').addEventListener('click', async () => {
+            if(!sessionTradeId) return alert("Establish validation data container channel loops first.");
+            const p = {}; p[`${currentRole}Confirm`] = true;
+            await updateDoc(doc(db, "trades", sessionTradeId), p);
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
