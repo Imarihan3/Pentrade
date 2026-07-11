@@ -9,82 +9,126 @@
         body, html { width: 100%; height: 100%; overflow: hidden; background: #020204; font-family: 'Courier New', Courier, monospace; }
         #canvas-container { width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
         
-        /* Glassmorphism UI Matrix */
+        /* Ritual Cinematic Overlay Intro */
+        #intro-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #020204; z-index: 100; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; padding: 40px;
+            pointer-events: auto; transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #ritual-text {
+            color: #d4af37; font-size: 1.2rem; letter-spacing: 4px; text-align: center;
+            max-width: 600px; min-height: 80px; line-height: 1.8; text-shadow: 0 0 10px rgba(214,175,55,0.4);
+        }
+        
+        /* Holographic Underworld Projector UI */
         .glass-panel {
             position: absolute; z-index: 10;
-            background: rgba(10, 10, 15, 0.65);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(214, 175, 55, 0.15);
-            border-radius: 8px; padding: 30px;
-            color: #e5e5e5; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            background: rgba(4, 4, 6, 0.75);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(214, 175, 55, 0.3);
+            border-radius: 4px; padding: 35px;
+            color: #e5e5e5; box-shadow: 0 0 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(214,175,55,0.05);
+            opacity: 0; transform: translate(-50%, -45%) scale(0.95);
+            transition: opacity 1.5s ease, transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
         }
+        .glass-panel.visible { opacity: 1; pointer-events: auto; }
         
-        #auth-box { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; text-align: center; }
-        #hud-overlay { top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 5; }
-        .hud-text { color: #d4af37; font-size: 0.8rem; letter-spacing: 2px; opacity: 0.6; }
+        #auth-box { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); width: 400px; text-align: center; }
+        #auth-box.visible { transform: translate(-50%, -50%) scale(1); }
+        
+        #hud-overlay { top: 30px; left: 30px; right: 30px; display: flex; justify-content: space-between; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 2s ease; }
+        #hud-overlay.visible { opacity: 1; }
+        .hud-text { color: #d4af37; font-size: 0.75rem; letter-spacing: 4px; opacity: 0.5; text-shadow: 0 0 5px rgba(214,175,55,0.5); }
         
         #request-card {
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 400px; display: none; text-align: center;
-            border-color: rgba(214, 175, 55, 0.4);
-            box-shadow: 0 0 40px rgba(214,175,55,0.15);
+            top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+            width: 420px; text-align: center;
+            border-color: rgba(214, 175, 55, 0.5);
+            box-shadow: 0 0 60px rgba(214,175,55,0.1);
         }
+        #request-card.visible { transform: translate(-50%, -50%) scale(1); }
 
-        #action-box { bottom: 10%; left: 50%; transform: translateX(-50%); display: none; }
+        #action-box { bottom: 12%; left: 50%; transform: translateX(-50%) scale(0.95); }
+        #action-box.visible { transform: translateX(-50%) scale(1); }
 
         input {
-            width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(214,175,55,0.2);
-            padding: 12px; margin: 10px 0; color: #fff; border-radius: 4px; font-family: inherit; outline: none;
+            width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(214,175,55,0.25);
+            padding: 14px; margin: 12px 0; color: #fff; border-radius: 2px; font-family: inherit; outline: none;
+            letter-spacing: 1px; transition: all 0.3s ease; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
         }
-        input:focus { border-color: #d4af37; }
+        input:focus { border-color: #d4af37; box-shadow: 0 0 15px rgba(214,175,55,0.2), inset 0 0 5px rgba(0,0,0,0.8); }
 
+        /* Antique Interactive Wax Seals / Plates */
         .gold-btn {
-            background: linear-gradient(135deg, #1c1c24 0%, #0c0c0f 100%);
-            color: #d4af37; border: 1px solid rgba(214,175,55,0.4);
-            padding: 14px 28px; width: 100%; cursor: pointer; font-family: inherit;
-            letter-spacing: 2px; font-weight: bold; border-radius: 4px; transition: all 0.4s ease;
+            background: linear-gradient(135deg, #16161c 0%, #060608 100%);
+            color: #d4af37; border: 1px solid rgba(214,175,55,0.5);
+            padding: 16px; width: 100%; cursor: pointer; font-family: inherit;
+            letter-spacing: 3px; font-weight: bold; border-radius: 2px; transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.6);
         }
-        .gold-btn:hover { color: #fff; border-color: #fff; box-shadow: 0 0 20px rgba(214,175,55,0.3); }
+        .gold-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(214,175,55,0.15), transparent);
+            transition: all 0.6s ease;
+        }
+        .gold-btn:hover::before { left: 100%; }
+        .gold-btn:hover { color: #fff; border-color: #fff; box-shadow: 0 0 25px rgba(214,175,55,0.35); transform: translateY(-2px); }
         
-        .btn-group { display: flex; gap: 15px; margin-top: 20px; }
-        .btn-decline { color: #a13b3b; border-color: rgba(161,59,59,0.4); }
-        .btn-decline:hover { box-shadow: 0 0 20px rgba(161,59,59,0.3); border-color: #a13b3b; }
+        .btn-group { display: flex; gap: 15px; margin-top: 25px; }
+        .btn-decline { color: #c34a4a; border-color: rgba(195,74,74,0.4); }
+        .btn-decline:hover { box-shadow: 0 0 25px rgba(195,74,74,0.3); border-color: #c34a4a; }
         
-        .pen-preview { width: 100%; height: 180px; background: rgba(255,255,255,0.02); margin: 15px 0; border-radius: 4px; object-fit: contain; border: 1px dashed rgba(214,175,55,0.15); }
+        .pen-preview { 
+            width: 100%; height: 200px; background: rgba(0,0,0,0.5); margin: 20px 0; 
+            border-radius: 2px; object-fit: contain; border: 1px dashed rgba(214,175,55,0.3);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 10px;
+        }
+        
+        /* Atmospheric audio indicator toggle */
+        #ambient-indicator {
+            position: absolute; bottom: 20px; left: 30px; z-index: 20;
+            color: #d4af37; font-size: 0.65rem; letter-spacing: 2px; opacity: 0.4;
+        }
     </style>
 </head>
 <body>
 
+    <div id="intro-overlay">
+        <div id="ritual-text"></div>
+    </div>
+
     <div id="hud-overlay">
-        <div class="hud-text">PEN TRADE ARCHIVE</div>
+        <div class="hud-text">PEN TRADE ARCHIVE // SUBTERRANEAN</div>
         <div class="hud-text" id="user-display">OFFLINE</div>
     </div>
 
     <div class="glass-panel" id="auth-box">
-        <h3 style="color:#d4af37; letter-spacing:4px; margin-bottom:15px;">PEN TRADE</h3>
-        <input type="email" id="auth-email" placeholder="Email">
-        <input type="password" id="auth-pass" placeholder="Password">
-        <input type="text" id="room-code" placeholder="Trade Room Code (Optional)">
-        <button class="gold-btn" id="auth-action" style="margin-top:10px;">LOGIN</button>
-        <button class="gold-btn" id="auth-create" style="margin-top:10px;">CREATE ACCOUNT</button>
+        <h3 style="color:#d4af37; letter-spacing:6px; margin-bottom:20px; font-weight: 300;">IDENTITY MANIFEST</h3>
+        <input type="email" id="auth-email" placeholder="CRYPTOGRAPHIC EMAIL">
+        <input type="password" id="auth-pass" placeholder="VAULT ACCREDITATION PASSPHRASE">
+        <input type="text" id="room-code" placeholder="CHAMBER SYNC CODE (OPTIONAL)">
+        <button class="gold-btn" id="auth-action" style="margin-top:15px;">INITIALIZE SESSION</button>
+        <button class="gold-btn" id="auth-create" style="margin-top:10px; border-color: rgba(214,175,55,0.25); font-size: 0.75rem;">ENGRAVE NEW ACCOUNT</button>
     </div>
 
     <div class="glass-panel" id="request-card">
-        <h4 style="color:#d4af37; letter-spacing:3px;">TRADE REQUEST</h4>
-        <p class="hud-text" id="req-sender" style="margin: 8px 0;"></p>
+        <h4 style="color:#d4af37; letter-spacing:4px; font-weight: 300;">INCOMING TRANSACTION CONTAINER</h4>
+        <p class="hud-text" id="req-sender" style="margin: 12px 0; font-size: 0.7rem;"></p>
         <img class="pen-preview" id="req-img" src="" alt="Pending Item Asset">
-        <h2 id="req-name" style="font-weight:300; letter-spacing:2px; margin-bottom:5px;"></h2>
+        <h2 id="req-name" style="font-weight:300; letter-spacing:3px; margin-bottom:5px; color: #fff;"></h2>
         <div class="btn-group">
-            <button class="gold-btn btn-decline" id="act-decline">DECLINE</button>
-            <button class="gold-btn" id="act-accept">ACCEPT</button>
+            <button class="gold-btn btn-decline" id="act-decline">PURGE CONTRACT</button>
+            <button class="gold-btn" id="act-accept">EXECUTE SwAP</button>
         </div>
     </div>
 
     <div class="glass-panel" id="action-box">
-        <button class="gold-btn" id="go-trade" style="padding: 16px 45px;">CREATE TRADE ROOM</button>
+        <button class="gold-btn" id="go-trade" style="padding: 20px 60px;">MANIFEST FRESH CHAMBER NODE</button>
     </div>
 
+    <div id="ambient-indicator">AUDIO STREAM INITIALIZED 🎧</div>
     <div id="canvas-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -93,7 +137,6 @@
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // CONFIGURATION: Integrated pentrade project credentials
         const firebaseConfig = {
             apiKey: "AIzaSyDBW2cqHZSZ7pe8BhwW82p8H3uVlhndsZY",
             authDomain: "pentrade.firebaseapp.com",
@@ -111,51 +154,150 @@
         let activeUser = null;
         let activeTradeId = null;
 
-        // --- Three.js Environment Render Setup ---
+        // --- Cinematic Audio Synthesis Node Engine ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function createRainSound() {
+            const bufferSize = audioCtx.sampleRate * 2, noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate), output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2.0 - 1.0; }
+            const whiteNoise = audioCtx.createBufferSource(); whiteNoise.buffer = noiseBuffer;
+            const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 1200; filter.Q.value = 0.4;
+            const gain = audioCtx.createGain(); gain.gain.value = 0.015;
+            whiteNoise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+            whiteNoise.loop = true; whiteNoise.start();
+        }
+        function playDeepEchoClick() {
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.type = 'sine'; osc.frequency.setValueAtTime(90, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        // --- Cinematic Interactive Intro Story Script ---
+        const storyLines = [
+            "People think value is measured in gold...",
+            "They are wrong.",
+            "Ink remembers every hand that has ever held it.",
+            "Some pens have written history. Some have signed peace.",
+            "Some should never leave their owners.",
+            "Tonight... You decide their fate."
+        ];
+        let currentLineIdx = 0, charIdx = 0;
+        const txtEl = document.getElementById('ritual-text');
+
+        function executeTypingSequence() {
+            if (currentLineIdx < storyLines.length) {
+                if (charIdx < storyLines[currentLineIdx].length) {
+                    txtEl.innerHTML += storyLines[currentLineIdx].charAt(charIdx);
+                    charIdx++;
+                    setTimeout(executeTypingSequence, 45 + Math.random() * 40);
+                } else {
+                    setTimeout(() => {
+                        txtEl.style.opacity = 0;
+                        setTimeout(() => {
+                            txtEl.innerHTML = ""; charIdx = 0; currentLineIdx++;
+                            txtEl.style.opacity = 1;
+                            executeTypingSequence();
+                        }, 1200);
+                    }, 2200);
+                }
+            } else {
+                document.getElementById('intro-overlay').style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById('intro-overlay').style.display = 'none';
+                    document.getElementById('hud-overlay').classList.add('visible');
+                    if(activeUser) {
+                        initializeIncomingListener(activeUser.email);
+                    } else {
+                        document.getElementById('auth-box').classList.add('visible');
+                    }
+                }, 2000);
+            }
+        }
+        window.addEventListener('click', () => {
+            if(audioCtx.state === 'suspended') { audioCtx.resume(); createRainSound(); executeTypingSequence(); }
+        }, { once: true });
+
+        // --- Underworld 3D Three.js Environment Assembly ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020204);
-        scene.fog = new THREE.FogExp2(0x020204, 0.05);
+        scene.fog = new THREE.FogExp2(0x020204, 0.04);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3, 25);
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 3.5, 20);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
         container.appendChild(renderer.domElement);
 
-        // Scene Infrastructure Assembly
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0f, roughness: 0.2 });
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), floorMat);
-        floor.rotation.x = -Math.PI/2; scene.add(floor);
+        // Ancient Wet Floor Grid / Concrete Blocks
+        const floorGeo = new THREE.PlaneGeometry(100, 100, 10, 10);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x07070b, roughness: 0.15, metalness: 0.5 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.05); scene.add(ambientLight);
-        const spotLight = new THREE.PointLight(0xd4af37, 1.5, 30); spotLight.position.set(0, 8, 5); scene.add(spotLight);
+        // Moody Chiaroscuro Atmosphere Lights
+        const ambientLight = new THREE.AmbientLight(0x0b0d1a, 0.2); scene.add(ambientLight);
+        
+        const candleLight = new THREE.PointLight(0xd4af37, 1.8, 25);
+        candleLight.position.set(0, 4, -4); candleLight.castShadow = true; scene.add(candleLight);
 
-        // Single Dynamic Focused 3D Floating Token Object
-        const tokenGeo = new THREE.BoxGeometry(2.5, 3.8, 0.08);
-        const tokenMat = new THREE.MeshStandardMaterial({ color: 0x12121a, metalness: 0.8, roughness: 0.2, emissive: 0xd4af37, emissiveIntensity: 0.05 });
+        const neonAlleyBacklight = new THREE.DirectionalLight(0x1a2b4c, 0.8);
+        neonAlleyBacklight.position.set(-15, 10, -20); scene.add(neonAlleyBacklight);
+
+        // Suspended Dynamic Ritual Artifact Box
+        const tokenGeo = new THREE.BoxGeometry(2.4, 3.6, 0.15);
+        const tokenMat = new THREE.MeshStandardMaterial({ color: 0x09090d, metalness: 0.95, roughness: 0.1, emissive: 0xd4af37, emissiveIntensity: 0.08 });
         const focalToken = new THREE.Mesh(tokenGeo, tokenMat);
-        focalToken.position.set(0, 3, -10);
-        scene.add(focalToken);
+        focalToken.position.set(0, 3.2, -8); focalToken.castShadow = true; scene.add(focalToken);
 
+        // Volumetric Subterranean Floating Embers Particle Core
+        const particleCount = 180;
+        const pGeometry = new THREE.BufferGeometry(), pPositions = new Float32Array(particleCount * 3);
+        for(let i=0; i<particleCount*3; i+=3) {
+            pPositions[i] = (Math.random() - 0.5) * 35;
+            pPositions[i+1] = Math.random() * 12;
+            pPositions[i+2] = (Math.random() - 0.5) * 35;
+        }
+        pGeometry.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+        const pMaterial = new THREE.PointsMaterial({ color: 0xd4af37, size: 0.06, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending });
+        const ashParticles = new THREE.Points(pGeometry, pMaterial); scene.add(ashParticles);
+
+        // Frame Rendering Loop Engine
         function animate() {
             requestAnimationFrame(animate);
             const time = performance.now() * 0.001;
             
-            // Quiet environment animation loop parameters
-            focalToken.rotation.y = Math.sin(time * 0.5) * 0.2;
-            focalToken.position.y = 3 + Math.sin(time * 1.2) * 0.1;
+            // Simulating organic candle flame flicker frequencies
+            candleLight.intensity = 1.6 + Math.sin(time * 7.8) * 0.15 + Math.cos(time * 2.2) * 0.1;
             
-            camera.position.x = Math.sin(time * 0.2) * 0.5;
+            // Handheld organic drift configuration 
+            focalToken.rotation.y = Math.sin(time * 0.4) * 0.15;
+            focalToken.rotation.x = Math.cos(time * 0.3) * 0.05;
+            focalToken.position.y = 3.2 + Math.sin(time * 1.0) * 0.08;
+            
+            // Ash rising motion simulation
+            const positions = ashParticles.geometry.attributes.position.array;
+            for(let i=1; i<positions.length; i+=3) {
+                positions[i] += 0.012; if(positions[i] > 12) positions[i] = 0;
+            }
+            ashParticles.geometry.attributes.position.needsUpdate = true;
+            
+            // Camera subtle organic micro-breathing loop
+            camera.position.x = Math.sin(time * 0.25) * 0.3;
+            camera.position.y = 3.5 + Math.cos(time * 0.35) * 0.1;
+            
             renderer.render(scene, camera);
         }
         animate();
 
         // --- Client Authentication Terminal Controller ---
-        // Login Logic Execution
         document.getElementById('auth-action').addEventListener('click', async () => {
+            playDeepEchoClick();
             const email = document.getElementById('auth-email').value.trim();
             const pass = document.getElementById('auth-pass').value;
             const roomCode = document.getElementById('room-code').value.trim();
@@ -163,37 +305,32 @@
 
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
-                if (roomCode) {
-                    localStorage.setItem("roomCode", roomCode);
-                }
-            } catch(e) {
-                console.error(e);
-                alert(e.code + "\n\n" + e.message);
-            }
+                if (roomCode) { localStorage.setItem("roomCode", roomCode); }
+            } catch(e) { alert(e.code + "\n\n" + e.message); }
         });
 
-        // Account Creation Logic Execution
         document.getElementById('auth-create').addEventListener('click', async () => {
+            playDeepEchoClick();
             const email = document.getElementById('auth-email').value.trim();
             const pass = document.getElementById('auth-pass').value;
             if(!email || !pass) return;
 
             try {
                 await createUserWithEmailAndPassword(auth, email, pass);
-                alert("Account created successfully!");
-            } catch(e) {
-                console.error(e);
-                alert(e.code + "\n\n" + e.message);
-            }
+                alert("Vault Signature Engraved Successfully!");
+            } catch(e) { alert(e.code + "\n\n" + e.message); }
         });
 
         // --- Real-time Account State Router ---
         onAuthStateChanged(auth, (user) => {
             if(user) {
                 activeUser = user;
-                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('auth-box').classList.remove('visible');
                 document.getElementById('user-display').innerText = user.email.toUpperCase();
-                initializeIncomingListener(user.email);
+                // Ensure UI is displayed instantly if intro is completely passed through
+                if (currentLineIdx >= storyLines.length) {
+                    initializeIncomingListener(user.email);
+                }
             }
         });
 
@@ -208,41 +345,43 @@
                     activeTradeId = docSnap.id;
                     const data = docSnap.data();
 
-                    // Shift ambient 3D card layout toward lens vector coordinates
-                    focalToken.position.set(0, 3, 10);
-                    tokenMat.emissiveIntensity = 0.6; // High energy glow
+                    // Morph 3D coordinate space parameters toward focus viewport
+                    focalToken.position.set(0, 3.2, 11.5);
+                    tokenMat.emissiveIntensity = 0.65; // Intense energy draw
 
-                    // Mount parameters onto DOM UI element
-                    document.getElementById('req-sender').innerText = `FROM: ${data.senderEmail}`;
-                    document.getElementById('req-name').innerText = data.senderPenName || "Artifact Specimen";
-                    document.getElementById('req-img').src = data.senderPenImg || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111'/></svg>";
+                    document.getElementById('req-sender').innerText = `VAULT ORIGIN: ${data.senderEmail.toUpperCase()}`;
+                    document.getElementById('req-name').innerText = data.senderPenName || "UNSPECIFIED SPECIMEN";
+                    document.getElementById('req-img').src = data.senderPenImg || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23040406'/></svg>";
                     
-                    document.getElementById('action-box').style.display = 'none';
-                    document.getElementById('request-card').style.display = 'block';
+                    document.getElementById('action-box').classList.remove('visible');
+                    document.getElementById('request-card').classList.add('visible');
                 } else {
-                    document.getElementById('request-card').style.display = 'none';
-                    document.getElementById('action-box').style.display = 'block';
-                    focalToken.position.set(0, 3, -10);
-                    tokenMat.emissiveIntensity = 0.05;
+                    document.getElementById('request-card').classList.remove('visible');
+                    document.getElementById('action-box').classList.add('visible');
+                    focalToken.position.set(0, 3.2, -8);
+                    tokenMat.emissiveIntensity = 0.08;
                 }
             });
         }
 
         // --- System Resolution Event Channels ---
         document.getElementById('act-accept').addEventListener('click', () => {
+            playDeepEchoClick();
             if(!activeTradeId) return;
             window.location.href = `trade.html?id=${activeTradeId}`;
         });
 
         document.getElementById('act-decline').addEventListener('click', async () => {
+            playDeepEchoClick();
             if(!activeTradeId) return;
             try {
                 await deleteDoc(doc(db, "trades", activeTradeId));
-                alert("Contract Purged.");
-            } catch(e) { alert("Purge Failed: " + e.message); }
+                alert("Contract Purged from Subsurface Modules.");
+            } catch(e) { alert("Purge Sequence Aborted: " + e.message); }
         });
 
         document.getElementById('go-trade').addEventListener('click', () => {
+            playDeepEchoClick();
             window.location.href = "trade.html";
         });
 
