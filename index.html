@@ -167,7 +167,8 @@
                     localStorage.setItem("roomCode", roomCode);
                 }
             } catch(e) {
-                alert("Login Failed: " + e.message);
+                console.error(e);
+                alert(e.code + "\n\n" + e.message);
             }
         });
 
@@ -181,7 +182,8 @@
                 await createUserWithEmailAndPassword(auth, email, pass);
                 alert("Account created successfully!");
             } catch(e) {
-                alert("Account Creation Failed: " + e.message);
+                console.error(e);
+                alert(e.code + "\n\n" + e.message);
             }
         });
 
