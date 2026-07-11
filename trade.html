@@ -165,14 +165,15 @@
             const urlParams = new URLSearchParams(window.location.search);
             const routeId = urlParams.get('id');
 
-            if(routeId) {
+            if(routeId){
                 sessionTradeId = routeId;
-                currentRole = 'receiver';
+
                 document.getElementById('target-recipient').style.display = 'none';
                 document.getElementById('init-contract-btn').style.display = 'none';
+
+                currentRole = null; // let Firestore determine sender/receiver
+
                 mountSyncPipeline();
-            } else {
-                currentRole = 'sender';
             }
         }
 
@@ -196,11 +197,12 @@
                     receiverPenName: "", receiverPenBrand: "", receiverPenCond: "", receiverPenDesc: "", receiverPenImg: ""
                 });
                 document.getElementById('init-contract-btn').innerText = "CONTAINER ACTIVE // SYNCING";
+                currentRole = "sender";
                 mountSyncPipeline();
             } catch(e) { alert("Deployment Failed: " + e.message); }
         });
 
-        // Local Input Observers to stream updates immediately
+        // Local Input and File Observers to stream updates immediately
         ['local-name', 'local-brand', 'local-cond', 'local-desc'].forEach(id => {
             document.getElementById(id).addEventListener('input', synchronizeLocalChangesToCloud);
         });
@@ -218,7 +220,10 @@
                 if(sessionTradeId) {
                     const payload = {};
                     payload[`${currentRole}PenImg`] = b64;
-                    try { await updateDoc(doc(db, "trades", sessionTradeId), payload); } catch(err){}
+                    try { 
+                        await updateDoc(doc(db, "trades", sessionTradeId), payload); 
+                        await synchronizeLocalChangesToCloud();
+                    } catch(err){}
                 }
             };
             r.readAsDataURL(file);
@@ -238,27 +243,38 @@
 
         // --- Real-time Bidirectional Synced UI Data Rendering Pipeline ---
         function mountSyncPipeline() {
-            onSnapshot(doc(db, "trades", sessionTradeId), (snapshot) => {
+            onSnapshot(doc(db, "trades", sessionTradeId), async (snapshot) => {
                 if(!snapshot.exists()) return;
                 transmissionLock = true;
                 const d = snapshot.data();
 
+                if(d.status === "completed") return;
+
+                if(activeUser.email === d.senderEmail){
+                    currentRole = "sender";
+                }else{
+                    currentRole = "receiver";
+                }
+
                 const peer = (currentRole === 'sender') ? 'receiver' : 'sender';
+                console.log("Role:", currentRole);
+                console.log("Peer:", peer);
 
                 // Synchronize counterparty visual displays
-                if(d[`${peer}PenName`] || d[`${peer}PenBrand`]) {
-                    document.getElementById('remote-data-content').innerHTML = `
-                        <p style="color:#d4af37; font-size:0.8rem; margin-bottom:5px;">OWNER: ${d[peer+'Email']}</p>
-                        <h2 style="font-weight:300; margin-bottom:8px;">${d[peer+'PenName'] || 'Unnamed'}</h2>
-                        <p><b>BRAND:</b> ${d[peer+'PenBrand'] || 'N/A'}</p>
-                        <p><b>CONDITION:</b> ${d[peer+'PenCond'] || 'N/A'}</p>
-                        <p style="margin-top:8px; font-size:0.8rem; color:#aaa;">${d[peer+'PenDesc'] || ''}</p>
-                    `;
-                }
+                document.getElementById('remote-data-content').innerHTML = `
+                    <p style="color:#d4af37; font-size:0.8rem; margin-bottom:5px;">OWNER: ${d[peer+'Email']}</p>
+                    <h2 style="font-weight:300; margin-bottom:8px;">${d[peer+'PenName'] || 'Unnamed'}</h2>
+                    <p><b>BRAND:</b> ${d[peer+'PenBrand'] || 'N/A'}</p>
+                    <p><b>CONDITION:</b> ${d[peer+'PenCond'] || 'N/A'}</p>
+                    <p style="margin-top:8px; font-size:0.8rem; color:#aaa;">${d[peer+'PenDesc'] || ''}</p>
+                `;
                 
-                if(d[`${peer}PenImg`]) {
-                    const rImg = document.getElementById('remote-preview-img');
-                    rImg.src = d[`${peer}PenImg`]; rImg.style.display = 'block';
+                const rImg = document.getElementById('remote-preview-img');
+                if(d[`${peer}PenImg`]){
+                    rImg.src = d[`${peer}PenImg`];
+                    rImg.style.display = "block";
+                }else{
+                    rImg.style.display = "none";
                 }
 
                 // Push initial cloud data to local inputs if not focused
@@ -267,6 +283,12 @@
                     document.getElementById('local-brand').value = d[`${currentRole}PenBrand`] || "";
                     document.getElementById('local-cond').value = d[`${currentRole}PenCond`] || "Mint (Collectible)";
                     document.getElementById('local-desc').value = d[`${currentRole}PenDesc`] || "";
+                    
+                    const myImg = document.getElementById("local-preview-img");
+                    if(d[`${currentRole}PenImg`]){
+                        myImg.src = d[`${currentRole}PenImg`];
+                        myImg.style.display = "block";
+                    }
                 }
 
                 // Verify confirmation parameters status matrices
@@ -275,9 +297,20 @@
                     document.getElementById('master-confirm-btn').style.opacity = '0.5';
                 }
 
-                if(d.senderConfirm && d.receiverConfirm) {
-                    document.getElementById('completion-blockout').classList.add('triggered');
-                    setTimeout(() => { window.location.href = "index.html"; }, 4000);
+                if(d.senderConfirm && d.receiverConfirm){
+                    if(d.status !== "completed"){
+                        try{
+                            await updateDoc(doc(db,"trades",sessionTradeId),{
+                                status:"completed"
+                            });
+                        }catch(e){}
+                    }
+
+                    document.getElementById("completion-blockout").classList.add("triggered");
+
+                    setTimeout(()=>{
+                        window.location.href="index.html";
+                    },4000);
                 }
 
                 transmissionLock = false;
@@ -288,7 +321,10 @@
         document.getElementById('master-confirm-btn').addEventListener('click', async () => {
             if(!sessionTradeId) return;
             const p = {}; p[`${currentRole}Confirm`] = true;
-            try { await updateDoc(doc(db, "trades", sessionTradeId), p); } catch(e){}
+            try { 
+                await synchronizeLocalChangesToCloud();
+                await updateDoc(doc(db, "trades", sessionTradeId), p); 
+            } catch(e){}
         });
 
         window.addEventListener('resize', () => {
