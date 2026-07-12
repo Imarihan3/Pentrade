@@ -48,7 +48,7 @@
         }
         #request-card.visible { transform: translate(-50%, -50%) scale(1); }
 
-        #action-box { bottom: 10%; left: 50%; transform: translateX(-50%) scale(0.95); }
+        #action-box { bottom: 10%; left: 50%; transform: translateX(-50%) scale(0.95); text-align: center; }
         #action-box.visible { transform: translateX(-50%) scale(1); }
 
         input {
@@ -73,7 +73,17 @@
         
         .pen-preview { 
             width: 100%; height: 180px; background: rgba(0,0,0,0.6); margin: 20px 0; 
-            border-radius: 2px; object-fit: contain; border: 1px dashed rgba(214,175,55,0.2); pading: 10px;
+            border-radius: 2px; object-fit: contain; border: 1px dashed rgba(214,175,55,0.2); padding: 10px;
+            display: none;
+        }
+        .node-info {
+            font-size: 0.7rem; color: #d4af37; margin-bottom: 10px; letter-spacing: 2px; opacity: 0.8;
+        }
+        .metadata-line {
+            font-size: 0.8rem; color: #aaa; margin: 5px 0; letter-spacing: 1px; text-align: left;
+        }
+        #metadata-container {
+            margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 2px;
         }
     </style>
 </head>
@@ -102,6 +112,13 @@
         <p class="hud-text" id="req-sender" style="margin: 12px 0; font-size: 0.7rem;"></p>
         <img class="pen-preview" id="req-img" src="" alt="Exchange Asset Preview">
         <h2 id="req-name" style="font-weight:300; letter-spacing:3px; margin-bottom:5px; color: #fff;"></h2>
+        
+        <div id="metadata-container">
+            <div class="metadata-line" id="req-brand"></div>
+            <div class="metadata-line" id="req-cond"></div>
+            <div class="metadata-line" id="req-desc"></div>
+        </div>
+
         <div class="btn-group">
             <button class="gold-btn btn-decline" id="act-decline">PURGE CONTRACT</button>
             <button class="gold-btn" id="act-accept">EXECUTE SWAP</button>
@@ -109,6 +126,7 @@
     </div>
 
     <div class="glass-panel" id="action-box">
+        <div class="node-info" id="node-status">STANDALONE INSTANCE TRADING</div>
         <button class="gold-btn" id="go-trade" style="padding: 20px 60px;">MANIFEST FRESH CHAMBER NODE</button>
     </div>
 
@@ -136,6 +154,9 @@
 
         let activeUser = null;
         let activeTradeId = null;
+        let currentRoomCode = null;
+        let unsubscribeTrades = null;
+        let isSequenceComplete = false;
 
         // --- Synthetic Audio Environment Generator ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -181,8 +202,12 @@
                 setTimeout(() => {
                     document.getElementById('intro-overlay').style.display = 'none';
                     document.getElementById('hud-overlay').classList.add('visible');
-                    if(activeUser) initializeIncomingListener(activeUser.email);
-                    else document.getElementById('auth-box').classList.add('visible');
+                    isSequenceComplete = true;
+                    if(activeUser) {
+                        initializeIncomingListener(activeUser.email);
+                    } else {
+                        document.getElementById('auth-box').classList.add('visible');
+                    }
                 }, 2000);
             }
         }
@@ -195,10 +220,10 @@
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x010103);
-        scene.fog = new THREE.FogExp2(0x010103, 0.07);
+        scene.fog = new THREE.FogExp2(0x010103, 0.06);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3, 12);
+        camera.position.set(0, 3.2, 7.5);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -208,34 +233,97 @@
 
         // Alley Architecture & Wet Ground Floor Plane
         const floorGeo = new THREE.PlaneGeometry(80, 80);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 0.1, metalness: 0.6 });
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x08080c, roughness: 0.15, metalness: 0.5 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 
         const wallLeftGeo = new THREE.BoxGeometry(1, 15, 40);
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x020204, roughness: 0.9 });
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x040407, roughness: 0.85 });
         const wallLeft = new THREE.Mesh(wallLeftGeo, wallMat); wallLeft.position.set(-5, 4, -5); scene.add(wallLeft);
         const wallRight = wallLeft.clone(); wallRight.position.x = 5; scene.add(wallRight);
 
-        // Ancient Workspace Table Struct
-        const desk = new THREE.Mesh(new THREE.BoxGeometry(4, 1.2, 2), new THREE.MeshStandardMaterial({ color: 0x0a0705, roughness: 0.5 }));
-        desk.position.set(0, 0.6, -2); scene.add(desk);
+        // --- Table Construction Structure ---
+        const tableGroup = new THREE.Group();
+        const topMat = new THREE.MeshStandardMaterial({ color: 0x2e201b, roughness: 0.35, metalness: 0.1 });
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x17110e, roughness: 0.5 });
+        
+        const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.15, 3), topMat);
+        tableTop.position.y = 1.4;
+        tableGroup.add(tableTop);
 
-        // The Hooded Mystery Trader Model Block
+        const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.4);
+        const legs = [
+            { x: -2.5, z: -1.2 }, { x: 2.5, z: -1.2 },
+            { x: -2.5, z: 1.2 }, { x: 2.5, z: 1.2 }
+        ];
+        legs.forEach(pos => {
+            const leg = new THREE.Mesh(legGeo, legMat);
+            leg.position.set(pos.x, 0.7, pos.z);
+            tableGroup.add(leg);
+        });
+        tableGroup.position.set(0, 0, -1);
+        scene.add(tableGroup);
+
+        // --- Detailed Fountain Pen Mesh Component ---
+        const penGroup = new THREE.Group();
+        const penBodyMat = new THREE.MeshStandardMaterial({ color: 0x050b14, roughness: 0.15, metalness: 0.8 });
+        const penGoldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.2, metalness: 0.9 });
+        const penNibMat = new THREE.MeshStandardMaterial({ color: 0xe5e5e5, roughness: 0.1, metalness: 0.95 });
+
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 16), penBodyMat);
+        barrel.rotation.z = Math.PI / 2;
+        penGroup.add(barrel);
+
+        const band1 = new THREE.Mesh(new THREE.CylinderGeometry(0.043, 0.043, 0.04, 16), penGoldMat);
+        band1.position.x = 0.25;
+        band1.rotation.z = Math.PI / 2;
+        penGroup.add(band1);
+
+        const band2 = band1.clone();
+        band2.position.x = -0.35;
+        penGroup.add(band2);
+
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.5, 16), penBodyMat);
+        cap.position.x = 0.6;
+        cap.rotation.z = Math.PI / 2;
+        penGroup.add(cap);
+
+        const clip = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.015, 0.02), penGoldMat);
+        clip.position.set(0.6, 0.05, 0);
+        penGroup.add(clip);
+
+        const nib = new THREE.Mesh(new THREE.ConeGeometry(0.038, 0.15, 16), penNibMat);
+        nib.position.x = -0.62;
+        nib.rotation.z = Math.PI / 2;
+        penGroup.add(nib);
+
+        penGroup.position.set(0, 1.52, -0.6);
+        penGroup.rotation.set(0, -0.3, 0);
+        scene.add(penGroup);
+
+        // Hooded Mystery Trader Model
         const traderGroup = new THREE.Group();
-        const bodyGeo = new THREE.CylinderGeometry(0.4, 0.8, 2.5, 10);
-        const hoodMat = new THREE.MeshStandardMaterial({ color: 0x020203, roughness: 0.95 });
-        const traderBody = new THREE.Mesh(bodyGeo, hoodMat); traderBody.position.y = 1.25; traderGroup.add(traderBody);
+        const bodyGeo = new THREE.CylinderGeometry(0.4, 0.9, 2.8, 16);
+        const hoodMat = new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 0.9 });
+        const traderBody = new THREE.Mesh(bodyGeo, hoodMat); traderBody.position.y = 1.4; traderGroup.add(traderBody);
         
-        const headGeo = new THREE.SphereGeometry(0.35, 8, 8);
-        const traderHead = new THREE.Mesh(headGeo, hoodMat); traderHead.position.y = 2.4; traderGroup.add(traderHead);
-        traderGroup.position.set(0, 0.6, -2.8); scene.add(traderGroup);
+        const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+        const traderHead = new THREE.Mesh(headGeo, hoodMat); traderHead.position.y = 2.7; traderGroup.add(traderHead);
+        traderGroup.position.set(0, 0, -3.2);
+        scene.add(traderGroup);
 
-        // Ambient Moon Lighting & Flickering Streetlamp Core
-        const moonLight = new THREE.DirectionalLight(0x1b263b, 0.4); moonLight.position.set(5, 20, 5); scene.add(moonLight);
+        // --- CELESTIAL AND ENVIRONMENT LIGHTING ---
+        const moonLight = new THREE.DirectionalLight(0x2b3b5c, 0.7); moonLight.position.set(5, 20, 5); scene.add(moonLight);
+        const streetLamp = new THREE.PointLight(0xd4af37, 1.6, 28); streetLamp.position.set(0, 7, 3); scene.add(streetLamp);
         
-        const streetLamp = new THREE.PointLight(0xd4af37, 1.5, 20); streetLamp.position.set(0, 6, 2); scene.add(streetLamp);
-        const deskInkGlow = new THREE.PointLight(0xd4af37, 0.8, 4); deskInkGlow.position.set(0, 1.5, -1.8); scene.add(deskInkGlow);
+        const deskSpotlight = new THREE.SpotLight(0xff1a1a, 5.0, 15, Math.PI / 5, 0.5, 1);
+        deskSpotlight.position.set(0, 5.5, -0.6);
+        deskSpotlight.target = tableTop;
+        scene.add(deskSpotlight);
+
+        const traderBacklight = new THREE.PointLight(0x3a4b6e, 1.2, 6);
+        traderBacklight.position.set(0, 2.2, -2.2);
+        scene.add(traderBacklight);
 
         // Subterranean Floating Mist/Rain Particles
         const particleCount = 250;
@@ -246,29 +334,25 @@
             pPositions[i+2] = (Math.random() - 0.5) * 20;
         }
         pGeometry.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
-        const rainParticles = new THREE.Points(pGeometry, new THREE.PointsMaterial({ color: 0x4a5568, size: 0.04, transparent: true, opacity: 0.3 }));
+        const rainParticles = new THREE.Points(pGeometry, new THREE.PointsMaterial({ color: 0x5a6578, size: 0.04, transparent: true, opacity: 0.35 }));
         scene.add(rainParticles);
 
         function animate() {
             requestAnimationFrame(animate);
             const time = performance.now() * 0.001;
             
-            // Replicating a broken street lamp lighting pattern
-            streetLamp.intensity = (Math.random() > 0.93) ? 0.2 : (1.4 + Math.sin(time * 12) * 0.1);
+            streetLamp.intensity = (Math.random() > 0.93) ? 0.3 : (1.5 + Math.sin(time * 12) * 0.15);
+            traderGroup.position.y = Math.sin(time * 1.5) * 0.02;
+            penGroup.rotation.y = -0.3 + Math.sin(time * 0.8) * 0.04;
             
-            // Trader slow breathing idle motions
-            traderGroup.position.y = 0.6 + Math.sin(time * 1.5) * 0.015;
-            
-            // Simulating falling precipitation cycle dynamics
             const positions = rainParticles.geometry.attributes.position.array;
             for(let i=1; i<positions.length; i+=3) {
                 positions[i] -= 0.15; if(positions[i] < 0) positions[i] = 10;
             }
             rainParticles.geometry.attributes.position.needsUpdate = true;
             
-            // Camera subtle breathing matrix translation
-            camera.position.x = Math.sin(time * 0.3) * 0.15;
-            camera.position.y = 3 + Math.cos(time * 0.4) * 0.05;
+            camera.position.x = Math.sin(time * 0.3) * 0.12;
+            camera.position.y = 3.2 + Math.cos(time * 0.4) * 0.04;
             
             renderer.render(scene, camera);
         }
@@ -281,8 +365,14 @@
             const roomCode = document.getElementById('room-code').value.trim();
             if(!email || !pass) return;
             try {
+                if (roomCode) {
+                    localStorage.setItem("roomCode", roomCode);
+                    currentRoomCode = roomCode;
+                } else {
+                    localStorage.removeItem("roomCode");
+                    currentRoomCode = null;
+                }
                 await signInWithEmailAndPassword(auth, email, pass);
-                if (roomCode) localStorage.setItem("roomCode", roomCode);
             } catch(e) { alert(e.message); }
         });
 
@@ -297,40 +387,116 @@
         });
 
         onAuthStateChanged(auth, (user) => {
+            if (unsubscribeTrades) {
+                unsubscribeTrades();
+                unsubscribeTrades = null;
+            }
+
             if(user) {
                 activeUser = user;
+                currentRoomCode = localStorage.getItem("roomCode");
+                
                 document.getElementById('auth-box').classList.remove('visible');
                 document.getElementById('user-display').innerText = user.email.toUpperCase();
-                if (currentLineIdx >= storyLines.length) initializeIncomingListener(user.email);
+                
+                if (currentRoomCode) {
+                    document.getElementById('node-status').innerText = `SYNCHRONIZED TO CHAMBER: ${currentRoomCode.toUpperCase()}`;
+                } else {
+                    document.getElementById('node-status').innerText = `STANDALONE INSTANCE TRADING`;
+                }
+
+                if (isSequenceComplete) {
+                    initializeIncomingListener(user.email);
+                }
+            } else {
+                activeUser = null;
+                document.getElementById('user-display').innerText = "OFFLINE";
+                document.getElementById('request-card').classList.remove('visible');
+                document.getElementById('action-box').classList.remove('visible');
+                if (isSequenceComplete) {
+                    document.getElementById('auth-box').classList.add('visible');
+                }
             }
         });
 
         function initializeIncomingListener(userEmail) {
             const tradesRef = collection(db, "trades");
             const q = query(tradesRef, where("receiverEmail", "==", userEmail), where("status", "==", "pending"));
-            onSnapshot(q, (snapshot) => {
-                if(!snapshot.empty) {
-                    const docSnap = snapshot.docs[0]; activeTradeId = docSnap.id;
-                    const data = docSnap.data();
+            
+            unsubscribeTrades = onSnapshot(q, (snapshot) => {
+                let currentValidTrade = null;
+
+                if (!snapshot.empty) {
+                    for (let docSnap of snapshot.docs) {
+                        const data = docSnap.data();
+                        const tradeRoom = data.roomCode || null;
+
+                        // Unified Room Code Matching Rule Check
+                        if (tradeRoom === currentRoomCode && data.senderEmail !== userEmail) {
+                            currentValidTrade = { id: docSnap.id, data: data };
+                            break; 
+                        }
+                    }
+                }
+
+                if (currentValidTrade) {
+                    activeTradeId = currentValidTrade.id;
+                    const data = currentValidTrade.data;
+                    
                     document.getElementById('req-sender').innerText = `ORIGIN CONTRACTOR: ${data.senderEmail.toUpperCase()}`;
                     document.getElementById('req-name').innerText = data.senderPenName || "RARE ARTIFACT SPECIMEN";
-                    document.getElementById('req-img').src = data.senderPenImg || "";
+                    
+                    document.getElementById('req-brand').innerText = `BRAND: ${data.senderPenBrand || 'UNKNOWN'}`;
+                    document.getElementById('req-cond').innerText = `CONDITION: ${data.senderPenCond || 'UNKNOWN'}`;
+                    document.getElementById('req-desc').innerText = `INSCRIPTION: "${data.senderPenDesc || 'No details provided.'}"`;
+
+                    const imgEl = document.getElementById('req-img');
+                    if (data.senderPenImg && data.senderPenImg.trim() !== "") {
+                        imgEl.src = data.senderPenImg;
+                        imgEl.style.display = "block";
+                    } else {
+                        imgEl.src = "";
+                        imgEl.style.display = "none";
+                    }
+                    
                     document.getElementById('action-box').classList.remove('visible');
                     document.getElementById('request-card').classList.add('visible');
                 } else {
+                    activeTradeId = null;
                     document.getElementById('request-card').classList.remove('visible');
                     document.getElementById('action-box').classList.add('visible');
                 }
+            }, (error) => {
+                console.error("Snapshot intersection anomaly: ", error);
             });
         }
 
         document.getElementById('act-accept').addEventListener('click', () => {
-            if(activeTradeId) window.location.href = `trade.html?id=${activeTradeId}`;
+            if(activeTradeId) {
+                window.location.href = `trade.html?id=${activeTradeId}`;
+            }
         });
+        
         document.getElementById('act-decline').addEventListener('click', async () => {
-            if(activeTradeId) await deleteDoc(doc(db, "trades", activeTradeId));
+            if(activeTradeId) {
+                try {
+                    const targetId = activeTradeId;
+                    activeTradeId = null;
+                    await deleteDoc(doc(db, "trades", targetId));
+                } catch(e) { 
+                    console.error("Purging error: ", e); 
+                }
+            }
         });
-        document.getElementById('go-trade').addEventListener('click', () => { window.location.href = "trade.html"; });
+
+        document.getElementById('go-trade').addEventListener('click', () => { 
+            if (currentRoomCode) {
+                window.location.href = `trade.html?room=${currentRoomCode}`; 
+            } else {
+                window.location.href = "trade.html"; 
+            }
+        });
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
